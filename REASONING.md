@@ -16,8 +16,7 @@ flowchart TD
     F --> H[Gemini Cascading LLM]
     H -->|PM Insights + Metadata| G((/insights API & UI))
     
-    style E fill:#f9f,stroke:#333,stroke-width:2px
-    style C fill:#bbf,stroke:#333,stroke-width:2px
+   
 ```
 
 ## The Assumed Data Schema
