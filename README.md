@@ -1,6 +1,6 @@
 # Emerging Issue Detector
 
-A full-stack, local-first application designed to ingest support tickets, generate semantic embeddings, and cluster them organically to surface high-impact product issues in real-time.
+A application designed to ingest support tickets, generate semantic embeddings, and cluster them organically to surface high-impact product issues in real-time.
 
 ## Quickstart
 
@@ -23,13 +23,6 @@ Once running, the server will be available at `http://localhost:8000`.
 **Go directly to [http://localhost:8000](http://localhost:8000) to see the sleek Emerging Issue Detector UI in action!** 
 
 *(You can also view the auto-generated API docs at `http://localhost:8000/docs`).*
-
-## What's New? (The "Human" Touches)
-
-*   **Sleek Frontend Dashboard:** Added a dark-themed, single-page UI built with Tailwind CSS. It features a live ticket feed, a manual ingestion form, animated progress bars, and beautifully rendered cluster insight cards.
-*   **LLM Rate-Limit Bypassing:** Integrated Python's `@lru_cache` to seamlessly tackle Google Gemini's free-tier API rate limits. Identical cluster summaries are instantly grabbed from memory, preventing massive API blocks.
-*   **Small Dataset Resilience:** HDBSCAN usually struggles with tiny test environments (throwing everything into `-1` noise). I've rewritten the algorithm to dynamically scale down `min_cluster_size` and relaxed `min_samples` thresholds. Now, it intelligently groups small manual ticket submissions together!
-*   **Dev-Friendly Sandboxing:** Added a quick **Seed Data** and **Clear Data** button straight to the UI—and API backend—so you can quickly nuke your environment and repopulate synthetic mock data to test the clustering engine instantly.
 
 ## Core Endpoints
 
@@ -73,6 +66,13 @@ The core engine surfaces high-level trends with calculated enterprise impact sco
   ]
 }
 ```
+
+## Bonus Features
+
+*   **Sleek Frontend Dashboard:** Added a dark-themed, single-page UI built with Tailwind CSS. It features a live ticket feed, a manual ingestion form, animated progress bars, and beautifully rendered cluster insight cards.
+*   **LLM Rate-Limit Bypassing:** Integrated Python's `@lru_cache` to seamlessly tackle Google Gemini's free-tier API rate limits. Identical cluster summaries are instantly grabbed from memory, preventing massive API blocks.
+*   **Small Dataset Resilience:** HDBSCAN usually struggles with tiny test environments (throwing everything into `-1` noise). I've rewritten the algorithm to dynamically scale down `min_cluster_size` and relaxed `min_samples` thresholds. Now, it intelligently groups small manual ticket submissions together!
+*   **Dev-Friendly Sandboxing:** Added a quick **Seed Data** and **Clear Data** button straight to the UI—and API backend—so you can quickly nuke your environment and repopulate synthetic mock data to test the clustering engine instantly.
 
 ## Screenshots
 
