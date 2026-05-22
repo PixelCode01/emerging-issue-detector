@@ -78,5 +78,5 @@ The core engine surfaces high-level trends with calculated enterprise impact sco
 
 ![Dashboard View](assets/Screenshot_20260522_172153.png)
 ![Running Analytics](assets/Screenshot_20260522_172202.png)
-![Clusters Extracted](assets/Screenshot_20260522_171859.png)
-![Insights Summary](assets/Screenshot_20260522_171913.png)
+![Custom Tickets](assets/Screenshot_20260522_171859.png)
+![Custom Tickets2](assets/Screenshot_20260522_171913.png)

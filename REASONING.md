@@ -1,32 +1,23 @@
 # REASONING.md: Emerging Issue Detector
 
-Hey Parth, here is the architecture and reasoning for the initial build. 
+Hey Parth, here is the architecture and reasoning for the Track A build. 
 
-I optimized this repo around your core constraint: **"simpler and easier is better."** Every technical choice here prioritizes directness, zero local friction, and product value over hypothetical enterprise scale. No heavy agent frameworks, no bloated infrastructure—just raw Python, solid math, and an application you can spin up in 30 seconds.
+I optimized this repo around your core constraint: **"simpler and easier is better."** 
 
 ## System Architecture
 
 ```mermaid
 flowchart TD
     A[Raw Support Tickets] --> B(Ingestion API)
-    
-    subgraph FastAPI Application
-        B -->|POST /ingest| C[Sentence-Transformers\nall-MiniLM-L6-v2]
-        C -->|Vector Embeddings| D[(SQLite Database)]
-        
-        S[Background /analyze Task] --> D
-        S -->|Fetch Unclustered| E[HDBSCAN Clustering]
-        E -->|Update DB labels| D
-        
-        F[GET /insights API] --> D
-        D -->|Fetch Tickets| G{Impact Scoring Logic}
-        G --> H[Gemini Cascading LLM]
-        H -->|PM Insights + Metadata| I((Frontend UI))
-    end
+    B --> C{SQLite Database}
+    C --> D[Sentence-Transformers\nall-MiniLM-L6-v2]
+    D -->|Vector Embeddings| E[HDBSCAN Clustering]
+    E --> F{Impact Scoring Logic}
+    F --> H[Gemini Cascading LLM]
+    H -->|PM Insights + Metadata| G((/insights API & UI))
     
     style E fill:#f9f,stroke:#333,stroke-width:2px
-    style D fill:#bbf,stroke:#333,stroke-width:2px
-    style C fill:#bfb,stroke:#333,stroke-width:2px
+    style C fill:#bbf,stroke:#333,stroke-width:2px
 ```
 
 ## The Assumed Data Schema
@@ -67,3 +58,4 @@ If we were pushing this to production, the architecture would evolve incremental
 1. **Migrate to PostgreSQL + `pgvector`:** Instead of fracturing the architecture by sending vectors to a NoSQL DB like Qdrant or Pinecone, I would upgrade SQLite to Postgres. Keeping high-dimensional vectors and relational metadata (SDK versions, user tiers) in the same transactional database allows for incredibly powerful, complex correlation queries.
 2. **Online vs. Offline Clustering:** Re-running HDBSCAN on every API ingestion is computationally wasteful as volume scales. I would run a nightly offline batch job to establish canonical cluster baselines, and use fast KNN (K-Nearest Neighbors) to map incoming daytime traffic to those existing clusters in real-time.
 3. **Async Queueing & Docker:** Introduce Celery + Redis so heavy inference latency doesn't block the ingestion API, and Dockerize the pipeline for standardized deployment.
+```
