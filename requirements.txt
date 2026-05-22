@@ -1,0 +1,9 @@
+# Tested on Python 3.11
+fastapi
+uvicorn
+pydantic
+numpy
+scikit-learn
+sentence-transformers
+hdbscan
+google-genai
