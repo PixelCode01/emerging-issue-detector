@@ -73,3 +73,10 @@ The core engine surfaces high-level trends with calculated enterprise impact sco
   ]
 }
 ```
+
+## Screenshots
+
+![Dashboard View](assets/Screenshot_20260522_172153.png)
+![Running Analytics](assets/Screenshot_20260522_172202.png)
+![Clusters Extracted](assets/Screenshot_20260522_171859.png)
+![Insights Summary](assets/Screenshot_20260522_171913.png)
