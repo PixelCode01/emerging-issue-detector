@@ -1,10 +1,10 @@
-# Conversation Intelligence API
+# Emerging Issue Detector
 
-A API designed to ingest support tickets, generate semantic embeddings locally, and cluster them organically to surface high-impact product issues in real-time.
+A full-stack, local-first application designed to ingest support tickets, generate semantic embeddings, and cluster them organically to surface high-impact product issues in real-time.
 
 ## Quickstart
 
-I've bundled everything into a simple Makefile to ensure a easy local setup.
+I've bundled everything into a simple Makefile to ensure effortless local setup.
 
 **Prerequisites:** Python 3.11+
 
@@ -12,53 +12,46 @@ I've bundled everything into a simple Makefile to ensure a easy local setup.
 # 1. Install dependencies
 make install
 
-# 2. Seed the database with ~500 synthetic tickets
-make seed
-
-# 3. Export your Gemini API key for AI summaries (optional but recommended)
+# 2. Export your Gemini API key for AI summaries
 export GEMINI_API_KEY="your_api_key_here"
 
-# 4. Start the FastAPI server locally
+# 3. Start the FastAPI server locally
 make run
 ```
 
 Once running, the server will be available at `http://localhost:8000`. 
-**To test the API instantly, visit the auto-generated UI at [http://localhost:8000/docs](http://localhost:8000/docs).**
+**Go directly to [http://localhost:8000](http://localhost:8000) to see the sleek Emerging Issue Detector UI in action!** 
+
+*(You can also view the auto-generated API docs at `http://localhost:8000/docs`).*
+
+## What's New? (The "Human" Touches)
+
+*   **Sleek Frontend Dashboard:** Added a dark-themed, single-page UI built with Tailwind CSS. It features a live ticket feed, a manual ingestion form, animated progress bars, and beautifully rendered cluster insight cards.
+*   **LLM Rate-Limit Bypassing:** Integrated Python's `@lru_cache` to seamlessly tackle Google Gemini's free-tier API rate limits. Identical cluster summaries are instantly grabbed from memory, preventing massive API blocks.
+*   **Small Dataset Resilience:** HDBSCAN usually struggles with tiny test environments (throwing everything into `-1` noise). I've rewritten the algorithm to dynamically scale down `min_cluster_size` and relaxed `min_samples` thresholds. Now, it intelligently groups small manual ticket submissions together!
+*   **Dev-Friendly Sandboxing:** Added a quick **Seed Data** and **Clear Data** button straight to the UI—and API backend—so you can quickly nuke your environment and repopulate synthetic mock data to test the clustering engine instantly.
 
 ## Core Endpoints
 
-- `POST /ingest`: Accepts batches of support tickets, generates vectors via `sentence-transformers`, and stores them as SQLite BLOBs.
-- `GET /insights`: Triggers the HDBSCAN clustering algorithm, calculates impact scores, and calls the LLM to generate human-readable summaries of trending issues.
-
-## Assumed Data Schema
-
-The metadata correlation process assumes the incoming support tickets adhere to this structure. This allows us to tie semantic clusters to actionable product metrics (like user tier or SDK version).
-
-```json
-{
-  "ticket_id": "TCK-1042",
-  "text": "Critical: Events dropping in eu-west blocking downstream...",
-  "timestamp": "2026-05-22T14:32:00Z",
-  "sdk_version": "v0.14",
-  "region": "eu-west",
-  "user_tier": "enterprise",
-  "source": "slack"
-}
-```
+- `GET /`: Loads the Frontend UI.
+- `POST /ingest`: Accepts support tickets, generates vectors locally via `sentence-transformers`, and stores them.
+- `POST /analyze`: Triggers the HDBSCAN clustering engine across unclustered items.
+- `GET /insights`: Calls the LLM to generate human-readable summaries of trending issues and returns them securely.
+- `POST /seed` & `POST /clear`: Fast sandboxing tools.
 
 ## Architecture Summary
 
-This repository is built for maintainability, speed, and zero external infrastructure dependencies:
+Built for maintainability, speed, and zero external infrastructure dependencies:
 
-- **API Framework**: FastAPI for strict Pydantic payload validation and rapid endpoint iteration.
-- **Embeddings**: `sentence-transformers` (`all-MiniLM-L6-v2`) running completely locally in-memory to avoid API latency and costs.
-- **Clustering**: `hdbscan` for density-based semantic clustering. We do not force noise points into clusters, ensuring PMs only see actual trends.
-- **LLM Summarization**: `google-genai` strictly for summarizing mathematical clusters into human-readable PM insights. Uses a cascading model fallback approach for high availability without crashing.
-- **Durability**: A standard `sqlite3` database. We serialize NumPy arrays directly to BLOB columns to avoid ORMs and heavy C-compiler dependencies (like `sqlite-vec`), ensuring this repo runs out of the box on any machine.
+- **API Framework**: FastAPI for routing and serving static HTML dynamically.
+- **Embeddings**: `sentence-transformers` (`all-MiniLM-L6-v2`) running locally in-memory to avoid API latency.
+- **Clustering**: `hdbscan` for density-based semantic clustering, gracefully tuned for small & large payloads.
+- **LLM Summarization**: Google Gemini strictly for summarizing clusters into human-readable insights.
+- **Durability**: Standard `sqlite3`. Directly serializes NumPy arrays to BLOB columns to avoid ORMs and vector-db footprint.
 
 ## Sample API Output: `/insights`
 
-The `/insights` endpoint clusters tickets, calculates an aggregate impact score based on user tiers (e.g., Enterprise issues weigh heavier than Free tier), and surfaces metadata correlations.
+The core engine surfaces high-level trends with calculated enterprise impact scores alongside actionable intelligence.
 
 ```json
 {
@@ -79,6 +72,4 @@ The `/insights` endpoint clusters tickets, calculates an aggregate impact score 
     }
   ]
 }
-```
-
 ```
