@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emerging Issue Detector</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+        @keyframes progress {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(200%); }
+        }
+        .animate-progress {
+            animation: progress 1.5s infinite linear;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 p-8 min-h-screen">
+
+    <div class="max-w-7xl mx-auto space-y-8">
+        
+        <header class="text-center py-6 border-b border-slate-700 flex flex-col justify-center items-center">
+            <h1 class="text-3xl font-bold text-white tracking-tight">Emerging Issue Detector</h1>
+            <p class="text-slate-400 mt-2">Real-time clustering and insights dashboard</p>
+            <div class="mt-4 px-4 py-1 rounded-full bg-slate-800 text-sm font-medium border border-slate-700">
+                Total Tickets Processed: <span id="ticket-counter" class="text-indigo-400">0</span>
+            </div>
+        </header>
+
+        <div class="flex flex-col lg:flex-row gap-6">
+            <section class="flex-1 bg-slate-800 rounded-xl p-6 shadow-lg border border-slate-700">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold text-white">Simulate Incoming Ticket</h2>
+                    <div class="flex gap-2">
+                        <button id="clear-btn" class="text-xs bg-rose-900/50 hover:bg-rose-800/60 text-rose-300 font-medium py-1 px-3 rounded transition flex items-center border border-rose-800/50">
+                            Clear Data
+                        </button>
+                        <button id="seed-btn" class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 font-medium py-1 px-3 rounded transition flex items-center">
+                            <svg id="seed-spinner" class="animate-spin -ml-1 mr-2 h-3 w-3 text-slate-300 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Run with Test Data
+                        </button>
+                    </div>
+                </div>
+                <form id="ingest-form" class="space-y-4">
+                <div>
+                    <label for="ticket-text" class="block text-sm font-medium text-slate-300">Ticket Text</label>
+                    <textarea id="ticket-text" required rows="3" class="mt-1 block w-full rounded-md bg-slate-900 border-slate-700 text-slate-100 focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2" placeholder="Describe the issue..."></textarea>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="ticket-region" class="block text-sm font-medium text-slate-300">Region</label>
+                        <select id="ticket-region" class="mt-1 block w-full rounded-md bg-slate-900 border-slate-700 text-slate-100 focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2">
+                            <option value="us-east">us-east</option>
+                            <option value="eu-west">eu-west</option>
+                            <option value="ap-south">ap-south</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="ticket-sdk" class="block text-sm font-medium text-slate-300">SDK Version</label>
+                        <select id="ticket-sdk" class="mt-1 block w-full rounded-md bg-slate-900 border-slate-700 text-slate-100 focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2">
+                            <option value="v0.13">v0.13</option>
+                            <option value="v0.14">v0.14</option>
+                            <option value="v0.15">v0.15</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between mt-6">
+                    <button type="submit" id="submit-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-md transition duration-150 shadow disabled:opacity-50">
+                        Submit Ticket
+                    </button>
+                    <span id="submit-status" class="text-sm font-medium"></span>
+                </div>
+            </form>
+        </section>
+
+        <section class="flex-1 bg-slate-800 rounded-xl p-6 shadow-lg border border-slate-700 h-[380px] flex flex-col">
+            <h2 class="text-xl font-semibold mb-4 text-white">Recent Tickets (Test / Live)</h2>
+            <div id="tickets-container" class="flex-1 overflow-y-auto space-y-3 pr-2">
+                <!-- Data injected here -->
+                <p class="text-sm text-slate-500 italic text-center mt-10">No tickets found.</p>
+            </div>
+        </section>
+        </div>
+
+        <section class="space-y-6">
+            <div class="flex items-center justify-between border-b border-slate-700 pb-4">
+                <h2 class="text-2xl font-semibold text-white">Analysis & Insights</h2>
+                <button id="rerun-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 px-6 rounded-md transition duration-150 shadow flex items-center disabled:opacity-50">
+                    <svg id="rerun-spinner" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Re-Run Clustering Engine
+                </button>
+            </div>
+
+            <!-- Indeterminate Progress bar -->
+            <div id="progress-container" class="w-full h-1 bg-slate-800 rounded-full overflow-hidden hidden -mt-2">
+                <div class="h-full bg-emerald-500 w-1/2 rounded-full animate-progress"></div>
+            </div>
+            
+            <div id="insights-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Data injected here -->
+            </div>
+            <div id="empty-state" class="hidden text-center py-12 bg-slate-800 rounded-xl border border-slate-700 border-dashed">
+                <p class="text-lg text-slate-400">No clusters found.</p>
+                <p class="text-sm text-slate-500 mt-2">Submit some tickets and click "Re-Run Clustering Engine" above.</p>
+            </div>
+        </section>
+
+    </div>
+
+    <script>
+        const ingestForm = document.getElementById('ingest-form');
+        const submitBtn = document.getElementById('submit-btn');
+        const submitStatus = document.getElementById('submit-status');
+        const rerunBtn = document.getElementById('rerun-btn');
+        const rerunSpinner = document.getElementById('rerun-spinner');
+        const progressContainer = document.getElementById('progress-container');
+        const insightsContainer = document.getElementById('insights-container');
+        const emptyState = document.getElementById('empty-state');
+        const seedBtn = document.getElementById('seed-btn');
+        const seedSpinner = document.getElementById('seed-spinner');
+        const ticketCounter = document.getElementById('ticket-counter');
+        const ticketsContainer = document.getElementById('tickets-container');
+        const clearBtn = document.getElementById('clear-btn');
+
+        // Initial fetch
+        fetchInsights();
+        fetchHealth();
+        fetchTickets();
+
+        clearBtn.addEventListener('click', async () => {
+            if (!confirm('Are you sure you want to delete all tickets?')) return;
+            
+            clearBtn.disabled = true;
+            clearBtn.textContent = 'Clearing...';
+            
+            try {
+                const res = await fetch('/clear', { method: 'POST' });
+                if (res.ok) {
+                    await fetchHealth();
+                    await fetchTickets();
+                    await fetchInsights();
+                    ticketCounter.textContent = '0';
+                }
+            } catch (err) {
+                console.error("Failed to clear data", err);
+            } finally {
+                clearBtn.disabled = false;
+                clearBtn.textContent = 'Clear Data';
+            }
+        });
+
+        seedBtn.addEventListener('click', async () => {
+            seedBtn.disabled = true;
+            seedSpinner.classList.remove('hidden');
+            seedBtn.childNodes[2].nodeValue = " Generating...";
+            
+            try {
+                const res = await fetch('/seed', { method: 'POST' });
+                if (res.ok) {
+                    await fetchHealth();
+                    await fetchTickets();
+                }
+            } catch (err) {
+                console.error("Failed to seed data", err);
+            } finally {
+                seedBtn.disabled = false;
+                seedSpinner.classList.add('hidden');
+                seedBtn.childNodes[2].nodeValue = " Run with Test Data";
+            }
+        });
+
+        ingestForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const text = document.getElementById('ticket-text').value;
+            const region = document.getElementById('ticket-region').value;
+            const sdk = document.getElementById('ticket-sdk').value;
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = "Submitting...";
+            submitStatus.textContent = "";
+
+            try {
+                const res = await fetch('/ingest', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text,
+                        region,
+                        sdk_version: sdk
+                    })
+                });
+
+                if (res.ok) {
+                    ingestForm.reset();
+                    submitStatus.textContent = "Ticket submitted successfully!";
+                    submitStatus.className = "text-sm font-medium text-emerald-400";
+                    setTimeout(() => { submitStatus.textContent = ""; }, 3000);
+                    fetchHealth();
+                    fetchTickets();
+                } else {
+                    throw new Error("Failed to submit");
+                }
+            } catch (err) {
+                submitStatus.textContent = "Error submitting ticket.";
+                submitStatus.className = "text-sm font-medium text-red-400";
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = "Submit Ticket";
+            }
+        });
+
+        rerunBtn.addEventListener('click', async () => {
+            rerunBtn.disabled = true;
+            rerunSpinner.classList.remove('hidden');
+            progressContainer.classList.remove('hidden');
+            rerunBtn.childNodes[2].nodeValue = " Analyzing..."; 
+
+            try {
+                const res = await fetch('/analyze', { method: 'POST' });
+                if (res.ok) {
+                    await fetchInsights();
+                    await fetchHealth();
+                    await fetchTickets();
+                }
+            } catch (err) {
+                console.error("Analysis failed", err);
+            } finally {
+                rerunBtn.disabled = false;
+                rerunSpinner.classList.add('hidden');
+                progressContainer.classList.add('hidden');
+                rerunBtn.childNodes[2].nodeValue = " Re-Run Clustering Engine";
+            }
+        });
+
+        async function fetchInsights() {
+            try {
+                const res = await fetch('/insights');
+                const data = await res.json();
+                
+                insightsContainer.innerHTML = '';
+                
+                if (!data.clusters || data.clusters.length === 0) {
+                    emptyState.classList.remove('hidden');
+                    return;
+                }
+                
+                emptyState.classList.add('hidden');
+
+                data.clusters.forEach(c => {
+                    const sampleText = c.samples && c.samples.length > 0 ? c.samples[0] : "No sample available";
+                    
+                    const card = document.createElement('div');
+                    card.className = "bg-slate-800 rounded-xl p-5 shadow-lg border border-slate-700 flex flex-col h-full";
+                    
+                    card.innerHTML = `
+                        <div class="flex justify-between items-start mb-3">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-700 text-slate-300">
+                                Cluster #${c.cluster_id}
+                            </span>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Impact</span>
+                                <span class="text-lg font-bold text-rose-400">${c.impact_score}</span>
+                            </div>
+                        </div>
+                        
+                        <h3 class="text-lg font-semibold text-white mb-4 line-clamp-3 leading-snug">
+                            " ${c.summary} "
+                        </h3>
+                        
+                        <div class="grid grid-cols-2 gap-4 mb-4 mt-auto">
+                            <div class="bg-slate-900 rounded-lg p-3 border border-slate-700/50">
+                                <span class="block text-xs font-medium text-slate-400 uppercase tracking-wide">Top Region</span>
+                                <span class="block mt-1 text-sm font-semibold text-slate-200">${c.metadata.top_region}</span>
+                            </div>
+                            <div class="bg-slate-900 rounded-lg p-3 border border-slate-700/50">
+                                <span class="block text-xs font-medium text-slate-400 uppercase tracking-wide">Top SDK</span>
+                                <span class="block mt-1 text-sm font-semibold text-slate-200">${c.metadata.top_sdk_version}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-2 text-sm text-slate-400 border-t border-slate-700 pt-3">
+                            <span class="font-medium text-slate-300 block mb-1 text-xs">Total Tickets: ${c.size}</span>
+                            <div class="italic line-clamp-2 text-xs bg-slate-900 overflow-hidden px-2 py-2 rounded">
+                                \` ${sampleText} \`
+                            </div>
+                        </div>
+                    `;
+                    insightsContainer.appendChild(card);
+                });
+            } catch (err) {
+                console.error("Failed to fetch insights", err);
+            }
+        }
+
+        async function fetchHealth() {
+            try {
+                const res = await fetch('/health');
+                const data = await res.json();
+                if (data.total_tickets !== undefined) {
+                    ticketCounter.textContent = data.total_tickets;
+                }
+            } catch (err) {
+                console.error("Failed to fetch health", err);
+            }
+        }
+
+        async function fetchTickets() {
+            try {
+                const res = await fetch('/tickets');
+                const data = await res.json();
+                
+                ticketsContainer.innerHTML = '';
+                
+                if (!data.tickets || data.tickets.length === 0) {
+                    ticketsContainer.innerHTML = '<p class="text-sm text-slate-500 italic text-center mt-10">No tickets found.</p>';
+                    return;
+                }
+
+                data.tickets.forEach(t => {
+                    const el = document.createElement('div');
+                    el.className = "bg-slate-900 rounded-lg p-3 border border-slate-700/50 flex flex-col gap-2";
+                    
+                    const clusterBadge = t.cluster_id !== null 
+                        ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold ${t.cluster_id === -1 ? 'bg-slate-700 text-slate-400' : 'bg-indigo-900 text-indigo-200'}">Cluster: ${t.cluster_id}</span>`
+                        : `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-900/50 text-amber-400 border border-amber-800">Unclustered</span>`;
+
+                    el.innerHTML = `
+                        <div class="flex justify-between items-start">
+                            <span class="text-xs text-slate-400 font-mono">${t.id.split('-')[0]}</span>
+                            ${clusterBadge}
+                        </div>
+                        <p class="text-sm text-slate-200 leading-snug">${t.text}</p>
+                        <div class="flex gap-2 mt-1">
+                            <span class="text-[10px] text-slate-500 uppercase">${t.region}</span>
+                            <span class="text-[10px] text-slate-500 uppercase">&bull; ${t.sdk_version}</span>
+                        </div>
+                    `;
+                    ticketsContainer.appendChild(el);
+                });
+            } catch (err) {
+                console.error("Failed to fetch tickets", err);
+            }
+        }
+    </script>
+</body>
+</html>

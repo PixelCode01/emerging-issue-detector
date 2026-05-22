@@ -1,13 +1,16 @@
 import os
 import logging
+import time
+from functools import lru_cache
 from google import genai
 
 logger = logging.getLogger(__name__)
 
-def generate_pm_insight(sample_tickets: list[str]) -> str:
+@lru_cache(maxsize=128)
+def generate_pm_insight(sample_tickets: tuple[str]) -> str:
     """
     Generates a single-sentence product manager insight from sample tickets
-    using Gemini, with cascading model fallbacks.
+    using Gemini, with cascading model fallbacks. Caches results to avoid rate limits.
     """
     fallback_text = f"Needs Review: {sample_tickets[0][:80]}..." if sample_tickets else "Needs Review: No tickets provided."
     
@@ -28,6 +31,8 @@ def generate_pm_insight(sample_tickets: list[str]) -> str:
 
     for model_name in models:
         try:
+            # Sleep slightly to avoid bursting the free tier limits on cold runs
+            time.sleep(1.5)
             response = client.models.generate_content(
                 model=model_name,
                 contents=prompt,
@@ -35,7 +40,8 @@ def generate_pm_insight(sample_tickets: list[str]) -> str:
             if response.text:
                 return response.text.strip()
         except Exception as e:
-            logger.warning(f"Model {model_name} failed: {e}. Trying next model...")
+            logger.warning(f"Model {model_name} failed: {e}. Trying next model in 3 seconds...")
+            time.sleep(3)
             
     logger.error("All Gemini models failed. Falling back to raw string.")
     return fallback_text

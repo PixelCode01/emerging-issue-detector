@@ -78,6 +78,19 @@ def get_unclustered_tickets():
         # Graceful degradation logic: Return empty list on failure rather than crashing out
         return []
 
+def get_all_tickets(limit=100):
+    """Fetch recent tickets."""
+    try:
+        with get_connection() as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute('SELECT id, text, timestamp, sdk_version, region, user_tier, source, cluster_id FROM tickets ORDER BY timestamp DESC LIMIT ?', (limit,))
+            rows = cursor.fetchall()
+            return [dict(row) for row in rows]
+    except Exception as e:
+        logger.error(f"Failed to fetch tickets: {e}")
+        return []
+
 def update_cluster_labels(cluster_updates):
     """
     Update cluster IDs for a batch of tickets.
@@ -92,3 +105,13 @@ def update_cluster_labels(cluster_updates):
             conn.commit()
     except Exception as e:
         logger.error(f"Failed to update cluster labels: {e}")
+
+def clear_all_tickets():
+    """Deletes all tickets from the database."""
+    try:
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('DELETE FROM tickets')
+            conn.commit()
+    except Exception as e:
+        logger.error(f"Failed to clear tickets from database: {e}")

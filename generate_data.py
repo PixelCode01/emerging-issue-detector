@@ -1,7 +1,7 @@
 import random
 import uuid
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from database import init_db, insert_ticket
 
 # Use standard logging instead of prints
@@ -23,7 +23,7 @@ def generate_ticket():
     """
     Generates a single ticket dictionary based on the predefined correlation rules.
     """
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     ticket_id = str(uuid.uuid4())
     
     # Rule 3: 50% true noise

@@ -4,20 +4,28 @@ import uuid
 import sqlite3
 from typing import List, Optional, Dict, Any
 from collections import Counter
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from database import get_connection, insert_ticket, get_unclustered_tickets
+from database import get_connection, insert_ticket, get_unclustered_tickets, get_all_tickets, clear_all_tickets
 from clustering import embedder, process_unclustered_tickets, calculate_impact_score
 from llm import generate_pm_insight
+from generate_data import main as generate_test_data_script
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Conversation Intelligence API")
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+@app.get("/")
+def serve_frontend():
+    return FileResponse('static/index.html')
 
 # 1. Middleware for processing time logging
 @app.middleware("http")
@@ -35,8 +43,6 @@ class TicketIngestRequest(BaseModel):
     text: str = Field(..., description="The content of the support ticket")
     sdk_version: str = Field(..., description="The SDK version string")
     region: str = Field(..., description="Region where the ticket originated")
-    user_tier: str = Field(..., description="Billing tier of the user")
-    source: str = Field(..., description="Source of the ticket, e.g., email, slack")
 
 class TicketIngestResponse(BaseModel):
     ticket_id: str
@@ -66,6 +72,19 @@ class ClusterInsight(BaseModel):
 
 class InsightsResponse(BaseModel):
     clusters: List[ClusterInsight]
+
+class RawTicket(BaseModel):
+    id: str
+    text: str
+    timestamp: str
+    sdk_version: str
+    region: str
+    user_tier: str
+    source: str
+    cluster_id: Optional[int] = None
+
+class TicketsResponse(BaseModel):
+    tickets: List[RawTicket]
 
 # 3. Thin Endpoints
 
@@ -124,7 +143,7 @@ def ingest_ticket(ticket: TicketIngestRequest):
     """
     try:
         ticket_id = str(uuid.uuid4())
-        timestamp = datetime.utcnow().isoformat()
+        timestamp = datetime.now(timezone.utc).isoformat()
         
         # Tradeoff: Blocking the request to fetch embedding. Acceptable for simple traffic,
         # but in production we'd decouple this via a queue (Celery/Kafka).
@@ -138,8 +157,8 @@ def ingest_ticket(ticket: TicketIngestRequest):
             timestamp=timestamp,
             sdk_version=ticket.sdk_version,
             region=ticket.region,
-            user_tier=ticket.user_tier,
-            source=ticket.source,
+            user_tier="mock_tier",
+            source="mock_source",
             embedding=embedding
         )
         return TicketIngestResponse(ticket_id=ticket_id, status="success")
@@ -223,7 +242,7 @@ def get_insights():
             regions = Counter([t['region'] for t in tickets])
             
             # 2 samples
-            samples = [t['text'] for t in tickets[:2]]
+            samples = tuple([t['text'] for t in tickets[:2]])
             
             insight_summary = generate_pm_insight(samples)
             
@@ -236,7 +255,7 @@ def get_insights():
                     top_region=regions.most_common(1)[0][0] if regions else "unknown",
                 ),
                 summary=insight_summary,
-                samples=samples
+                samples=list(samples)
             ))
             
         # Rank by impact score descending
@@ -246,3 +265,34 @@ def get_insights():
     except Exception as e:
         logger.error(f"Failed to fetch insights: {e}")
         return JSONResponse(status_code=500, content={"error": "Insights failed"})
+
+@app.post("/clear")
+def clear_database_endpoint():
+    """Clears all tickets from the database."""
+    try:
+        clear_all_tickets()
+        return JSONResponse(status_code=200, content={"status": "success", "message": "All tickets cleared"})
+    except Exception as e:
+        logger.error(f"Failed to clear data: {e}")
+        return JSONResponse(status_code=500, content={"error": "Clear failed"})
+
+@app.post("/seed")
+def seed_database():
+    """Generates synthetic test data."""
+    try:
+        generate_test_data_script()
+        return JSONResponse(status_code=200, content={"status": "success", "message": "Test data generated"})
+    except Exception as e:
+        logger.error(f"Failed to seed data: {e}")
+        return JSONResponse(status_code=500, content={"error": "Seed failed"})
+
+@app.get("/tickets", response_model=TicketsResponse)
+def get_tickets_endpoint():
+    """Fetches recent tickets for viewing."""
+    try:
+        tickets = get_all_tickets(limit=100)
+        return TicketsResponse(tickets=tickets)
+    except Exception as e:
+        logger.error(f"Failed to fetch tickets: {e}")
+        return JSONResponse(status_code=500, content={"error": "Fetch failed"})
+
