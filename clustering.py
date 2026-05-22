@@ -37,8 +37,17 @@ def process_unclustered_tickets():
         
         # Cluster embeddings
         logger.info("Clustering embeddings with HDBSCAN...")
-        clusterer = hdbscan.HDBSCAN(min_cluster_size=5)
-        cluster_labels = clusterer.fit_predict(embeddings)
+        if len(embeddings) < 2:
+            cluster_labels = [-1] * len(embeddings)
+        else:
+            # Dynamic min_cluster_size allows smaller datasets to form clusters instead of being marked as noise
+            min_size = max(2, min(5, len(embeddings) // 4)) if len(embeddings) >= 8 else 2
+            clusterer = hdbscan.HDBSCAN(
+                min_cluster_size=min_size,
+                min_samples=1,
+                cluster_selection_epsilon=0.8
+            )
+            cluster_labels = clusterer.fit_predict(embeddings)
         
         cluster_updates = []
         for ticket, label in zip(tickets, cluster_labels):
